@@ -2,7 +2,9 @@
 mqtt433 python service script to use rtl_433 and a SDR dongle to read Acurite temperature/humidity sensors (or other 433MHz) into JSON and publish to MQTT topic for Homeassistant sensor integration. I did not write the originals of these scripts, merely debugged for my own purposes.
 
 The initially recommended way to get rtl_433 data into mosquitto is as follows:
+
 rtl_433 -F json -U -R 30 | /usr/bin/mosquitto_pub -h <ip address> -u <login> -P <password> -t home/rtl_433 -l
+
 The problem is that the sensors transmit each signal multiple times.   With two weather sensors and half a dozen contact sensors the system would get around a dozen messages per minute.   In the above command line that means a dozen logins per minute.  The system was unstable, mosquitto kept crashing.
 
 Github member packitout did a great job of wrapping the process into a python script that allowed the login to mosquitto to be maintained between messages, this stopped the crashing.
