@@ -6,6 +6,11 @@ import paho.mqtt.client as mqtt
 import logging
 import subprocess
 import copy
+import argparse
+
+parser = argparse.ArgumentParser(description='Cache incoming rtl_433 radio messages and surpress duplicates')
+parser.add_argument('--nocache', nargs='*', help='ids of devices not to cache and therefore allow every message to pass')
+args = parser.parse_args()
 
 def on_connect(client, userdata, flags, rc):
     logging.info("CNNACK received with code %d." % (rc))
@@ -57,7 +62,8 @@ while True:
         	#mqttc.loop(2) # timeout = 2s
         	logging.debug("published")
         # Store the latest time-free data in the dictionary for this id
-        linedata[payload_nt['id']] = payload_nt
+        if id not in args.nocache:
+            linedata[id] = payload_nt
     except Exception as x:
         logging.warning("exception %s" % x)
         logging.warning("input:'%s'" % input)
