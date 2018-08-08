@@ -6,10 +6,12 @@ import paho.mqtt.client as mqtt
 import logging
 import subprocess
 import copy
+import threading
 import argparse
 
 parser = argparse.ArgumentParser(description='Cache incoming rtl_433 radio messages and surpress duplicates')
 parser.add_argument('--nocache', nargs='*', help='ids of devices not to cache and therefore allow every message to pass')
+parser.add_argument('--tmpcache', nargs='*', help='ids of devices to cache for only a couple of seconds and therefore allow some messages to get filtered')
 args = parser.parse_args()
 
 def on_connect(client, userdata, flags, rc):
@@ -33,10 +35,12 @@ proc = subprocess.Popen(['rtl_433', '-F', 'json', '-R', '12', '-R', '30', '-R', 
 
 linedata = {}
 
+def killcachedid(arg):
+    linedata.pop(arg, None)
+
 while True:
     try:
         logging.debug("listening")
-#        input = sys.stdin.readline()
         input = proc.stdout.readline()
         payload = json.loads(input.decode("utf-8"))
         # Make a copy for manipulaqtion
@@ -54,16 +58,19 @@ while True:
         logging.debug("old: "+json.dumps(olddata))
         # If the data has changed for this id (other than time) send it (the original data) out
         if payload_nt != olddata:
+            topic = "home/rtl_433"
             # For now - we will let openhab decode this
-        	(rc, mid) = mqttc.publish("home/rtl_433", json.dumps(payload))
-		    #(rc, mid) = mqttc.publish("home/rtl_433_2/sensor_" + str(payload['id']) , json.dumps(payload))
-		    #(rc, mid) = mqttc.publish("hass/rtl_433", json.dumps(payload))
-        	logging.debug("rc=%s, mid=%s" % (rc, mid))
-        	#mqttc.loop(2) # timeout = 2s
-        	logging.debug("published")
-        # Store the latest time-free data in the dictionary for this id
-        if id not in args.nocache:
-            linedata[id] = payload_nt
+            #topic += "/sensor_" + str(id)
+            (rc, mid) = mqttc.publish(topic, json.dumps(payload))
+            #logging.debug("rc=%s, mid=%s" % (rc, mid))
+            logging.debug("published " + topic + ": " + json.dumps(payload))
+            # Store the latest time-free data in the dictionary for this id
+            if args.nocache is None or args.nocache is not None and str(id) not in args.nocache:
+                linedata[id] = payload_nt
+                logging.debug("cached id " + str(id) + " as: " + json.dumps(payload_nt))
+            if args.tmpcache is not None and str(id) in args.tmpcache:
+                t = threading.Timer(2, killcachedid, [id])
+                t.start()
     except Exception as x:
         logging.warning("exception %s" % x)
         logging.warning("input:'%s'" % input)
