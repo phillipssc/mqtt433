@@ -58,12 +58,10 @@ while True:
         logging.debug("old: "+json.dumps(olddata))
         # If the data has changed for this id (other than time) send it (the original data) out
         if payload_nt != olddata:
-            topic = "home/rtl_433"
-            # For now - we will let openhab decode this
-            #topic += "/sensor_" + str(id)
-            (rc, mid) = mqttc.publish(topic, json.dumps(payload))
-            #logging.debug("rc=%s, mid=%s" % (rc, mid))
-            logging.debug("published " + topic + ": " + json.dumps(payload))
+            # publish the delta for the specific sensor
+            for key, value in payload_nt.items():
+                if olddata == "" or value != olddata[key]:
+                    (rc, mid) = mqttc.publish("r433/" + str(id) + "/" + key, value)
             # Store the latest time-free data in the dictionary for this id
             if args.nocache is None or args.nocache is not None and str(id) not in args.nocache:
                 linedata[id] = payload_nt
