@@ -23,6 +23,17 @@ A combination is also possible
 
 e.g.  python mqtt433.py --nocache 2345 --tmpcache 100001 100030 100700
 
+The data set to mosquitto is optimized too.   The script goes through the JSON payload and for each variable determines if something has changed.   It then sends out a message just for that variable as follows:
+
+The MQTT Topic begins with "r433/' it then has the id followed by another "/" and then the variable name.   For a door contact sensor I have that might look like:
+
+Topic:
+r433/50643/cmd
+
+Payload:
+14
+
+This makes for simple mapping in the home automation application.
 
 ## mqtt433.py
 this is the python script to run as a service. it requires paho-mqtt (https://pypi.python.org/pypi/paho-mqtt/1.1). Right now it only uses user authentication for the MQTT broker (so put the username and password you want this system to use to connect to the broker into this code) since it is meant to run on the hub machine connecting to the broker with the 1833 port (as opposed to the 8833 port for TLS encrypted traffic of MQTT clients outside the local network).
